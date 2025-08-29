@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kalkulator Dosis Obat Anak</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0077b6">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f8ff; margin:0; padding:0; }
+        .container { max-width:650px; margin:40px auto; padding:30px; background-color:#fff; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.2);}
+        h1{text-align:center; color:#0077b6;}
+        label{display:block; margin-top:15px; font-weight:bold; color:#023e8a;}
+        input, select{padding:8px; margin-top:5px; width:100%; border-radius:5px; border:1px solid #90e0ef; font-size:14px;}
+        button{margin-top:20px; padding:12px 25px; border:none; border-radius:5px; font-size:16px; cursor:pointer; transition:0.3s; margin-right:10px;}
+        #hitungBtn{background-color:#00b4d8; color:white;}
+        #simpanBtn{background-color:#0077b6; color:white;}
+        #tambahBtn{background-color:#48cae4; color:white;}
+        #hapusBtn{background-color:#f94144; color:white;}
+        button:hover{opacity:0.9;}
+        .result{margin-top:25px; padding:20px; background-color:#caf0f8; border-left:5px solid #0077b6; border-radius:5px; color:#03045e;}
+        .sediaan-input{margin-left:10px; margin-top:8px;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Kalkulator Dosis Obat Anak</h1>
+
+    <label>Nama Anak: <input type="text" id="nama"></label>
+    <label>Berat Badan (kg): <input type="number" id="bb" min="0" step="0.1"></label>
+    <label>Obat:
+        <select id="obat" onchange="updateSediaanInputs()"></select>
+    </label>
+
+    <label>Dosis mg/kg BB per kali minum (minimum): <input type="number" id="dosisMin" step="0.1"></label>
+    <label>Dosis mg/kg BB per kali minum (maksimum): <input type="number" id="dosisMaxPerKg" step="0.1"></label>
+    <label>Dosis maksimal absolut per dosis (mg): <input type="number" id="dosisMax"></label>
+
+    <h3>Sediaan Obat (mg per sediaan):</h3>
+    <div id="sediaanInputs">
+        <label class="sediaan-input">Tablet: <input type="number" id="tabletMg"></label>
+        <label class="sediaan-input">Sirup (mg/5 mL): <input type="number" id="sirupMg"></label>
+        <label class="sediaan-input">Drop (mg/mL): <input type="number" id="dropMg"></label>
+    </div>
+
+    <button id="hitungBtn" onclick="hitungObat()">Hitung Dosis</button>
+    <button id="simpanBtn" onclick="simpanDefault()">Simpan Default</button>
+    <button id="tambahBtn" onclick="tambahObat()">Tambah Obat</button>
+    <button id="hapusBtn" onclick="hapusObat()">Hapus Obat</button>
+
+    <div class="result" id="hasil"></div>
+</div>
+
+<script>
+const defaultObatData = {
+    "Paracetamol": {dosisMin:10,dosisMaxPerKg:15,dosisMax:500,sediaanMg:{Tablet:500,Sirup:120,Drop:20}},
+    "Amoxicillin": {dosisMin:20,dosisMaxPerKg:40,dosisMax:500,sediaanMg:{Tablet:500,Sirup:125,Drop:25}},
+    "Ambroxol": {dosisMin:1,dosisMaxPerKg:2,dosisMax:30,sediaanMg:{Tablet:15,Sirup:30,Drop:5}},
+    "Ibuprofen": {dosisMin:5,dosisMaxPerKg:10,dosisMax:400,sediaanMg:{Tablet:100,Sirup:100,Drop:20}},
+    "Dexametason 0.5 mg": {dosisMin:0.1,dosisMaxPerKg:0.15,dosisMax:0.5,sediaanMg:{Tablet:0.5,Sirup:0.5,Drop:0.1}},
+    "Ranitidin": {dosisMin:1,dosisMaxPerKg:2,dosisMax:150,sediaanMg:{Tablet:150,Sirup:15,Drop:3}}
+};
+
+function getObatData(){
+    const stored = localStorage.getItem("obatData");
+    if(!stored){ localStorage.setItem("obatData",JSON.stringify(defaultObatData)); return JSON.parse(JSON.stringify(defaultObatData));}
+    return JSON.parse(stored);
+}
+
+function populateObatDropdown(){
+    const select = document.getElementById('obat');
+    select.innerHTML='<option value="">--Pilih Obat--</option>';
+    const data=getObatData();
+    for(let key in data){ const option=document.createElement('option'); option.value=key; option.text=key; select.add(option);}
+}
+populateObatDropdown();
+
+function updateSediaanInputs(){
+    const obat=document.getElementById('obat').value;
+    if(obat){
+        const data=getObatData()[obat];
+        document.getElementById('dosisMin').value=data.dosisMin;
+        document.getElementById('dosisMaxPerKg').value=data.dosisMaxPerKg;
+        document.getElementById('dosisMax').value=data.dosisMax;
+        document.getElementById('tabletMg').value=data.sediaanMg.Tablet;
+        document.getElementById('sirupMg').value=data.sediaanMg.Sirup;
+        document.getElementById('dropMg').value=data.sediaanMg.Drop;
+    }
+}
+
+function hitungObat(){
+    const nama=document.getElementById('nama').value||"N/A";
+    const bb=parseFloat(document.getElementById('bb').value)||0;
+    const obat=document.getElementById('obat').value||"N/A";
+    const dosisMin=parseFloat(document.getElementById('dosisMin').value)||0;
+    const dosisMaxPerKg=parseFloat(document.getElementById('dosisMaxPerKg').value)||0;
+    const dosisMax=parseFloat(document.getElementById('dosisMax').value)||Infinity;
+    const tabletMg=parseFloat(document.getElementById('tabletMg').value)||0;
+    const sirupMg=parseFloat(document.getElementById('sirupMg').value)||0;
+    const dropMg=parseFloat(document.getElementById('dropMg').value)||0;
+
+    let totalDosisMin=bb*dosisMin;
+    let totalDosisMax=bb*dosisMaxPerKg;
+    if(totalDosisMax>dosisMax) totalDosisMax=dosisMax;
+
+    const jumlahTabletMin=tabletMg?Math.ceil((totalDosisMin/tabletMg)*10)/10*tabletMg:"N/A";
+    const jumlahTabletMax=tabletMg?Math.ceil((totalDosisMax/tabletMg)*10)/10*tabletMg:"N/A";
+    const jumlahSirupMin=sirupMg?Math.ceil((totalDosisMin/sirupMg)*10)/10*sirupMg:"N/A";
+    const jumlahSirupMax=sirupMg?Math.ceil((totalDosisMax/sirupMg)*10)/10*sirupMg:"N/A";
+    const jumlahDropMin=dropMg?Math.ceil((totalDosisMin/dropMg)*10)/10*dropMg:"N/A";
+    const jumlahDropMax=dropMg?Math.ceil((totalDosisMax/dropMg)*10)/10*dropMg:"N/A";
+
+    let hasil=`<p><b>Nama Anak:</b> ${nama}</p>`;
+    hasil+=`<p><b>Berat Badan:</b> ${bb?bb+" kg":"N/A"}</p>`;
+    hasil+=`<p><b>Obat:</b> ${obat}</p>`;
+    hasil+=`<p><b>Total dosis per kali minum:</b> ${totalDosisMin} - ${totalDosisMax} mg</p>`;
+    hasil+=`<p><b>Jumlah Tablet:</b> ${jumlahTabletMin} - ${jumlahTabletMax} mg</p>`;
+    hasil+=`<p><b>Jumlah Sirup:</b> ${jumlahSirupMin} - ${jumlahSirupMax} mg</p>`;
+    hasil+=`<p><b>Jumlah Drop:</b> ${jumlahDropMin} - ${jumlahDropMax} mg</p>`;
+
+    document.getElementById('hasil').innerHTML=hasil;
+}
+
+function simpanDefault(){
+    const obat=document.getElementById('obat').value;
+    if(!obat){alert("Pilih obat sebelum menyimpan default");return;}
+    const data=getObatData();
+    data[obat].dosisMin=parseFloat(document.getElementById('dosisMin').value)||data[obat].dosisMin;
+    data[obat].dosisMaxPerKg=parseFloat(document.getElementById('dosisMaxPerKg').value)||data[obat].dosisMaxPerKg;
+    data[obat].dosisMax=parseFloat(document.getElementById('dosisMax').value)||data[obat].dosisMax;
+    data[obat].sediaanMg={
+        Tablet:parseFloat(document.getElementById('tabletMg').value)||data[obat].sediaanMg.Tablet,
+        Sirup:parseFloat(document.getElementById('sirupMg').value)||data[obat].sediaanMg.Sirup,
+        Drop:parseFloat(document.getElementById('dropMg').value)||data[obat].sediaanMg.Drop
+    };
+    localStorage.setItem("obatData",JSON.stringify(data));
+    alert("Pengaturan default disimpan untuk "+obat);
+}
+
+function tambahObat(){
+    const namaBaru=prompt("Masukkan nama obat baru:");
+    if(!namaBaru) return alert("Nama obat tidak boleh kosong.");
+    const dosisMin=parseFloat(prompt("Dosis minimum mg/kg BB per kali minum:"))||0;
+    const dosisMaxPerKg=parseFloat(prompt("Dosis maksimum mg/kg BB per kali minum:"))||0;
+    const dosisMax=parseFloat(prompt("Dosis maksimal absolut per dosis (mg):"))||0;
+    const tabletMg=parseFloat(prompt("Sediaan tablet (mg):"))||0;
+    const sirupMg=parseFloat(prompt("Sediaan sirup (mg/5 mL):"))||0;
+    const dropMg=parseFloat(prompt("Sediaan drop (mg/mL):"))||0;
+    const data=getObatData();
+    data[namaBaru]={dosisMin,dosisMaxPerKg,dosisMax,sediaanMg:{Tablet:tabletMg,Sirup:sirupMg,Drop:dropMg}};
+    localStorage.setItem("obatData",JSON.stringify(data));
+    populateObatDropdown();
+    alert("Obat berhasil ditambahkan!");
+}
+
+function hapusObat(){
+    const obat=document.getElementById('obat').value;
+    if(!obat) return alert("Pilih obat yang akan dihapus.");
+    if(!confirm("Apakah yakin ingin menghapus obat "+obat+"?")) return;
+    const data=getObatData();
+    delete data[obat];
+    localStorage.setItem("obatData",JSON.stringify(data));
+    populateObatDropdown();
+    alert("Obat berhasil dihapus!");
+}
+
+// PWA: register service worker
+if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>{
+        navigator.serviceWorker.register('service-worker.js')
+        .then(reg=>console.log('SW registered:',reg))
+        .catch(err=>console.log('SW registration failed:',err));
+    });
+}
+</script>
+</body>
+</html>
